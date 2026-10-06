@@ -25,6 +25,14 @@ if (!SpeechRecognition) {
 
         status.textContent = "音声認識が完了しました。";
 
+        recognition.onspeechstart = () => {
+    status.textContent = "👂 声を検出しました！";
+};
+
+recognition.onspeechend = () => {
+    status.textContent = "⏳ 声の検出が終了しました。";
+};
+
         result.innerHTML =
             "<p>認識結果：</p>" +
             "<p>" + text + "</p>";
