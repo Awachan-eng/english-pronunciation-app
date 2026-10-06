@@ -1,4 +1,4 @@
-alert("新しいscript.jsが読み込まれました");
+alert("最新版です！");
 
 const sampleButton = document.getElementById("sampleButton");
 const recordButton = document.getElementById("recordButton");
