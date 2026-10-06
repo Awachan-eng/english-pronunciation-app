@@ -12,7 +12,14 @@ sampleButton.addEventListener("click", () => {
 let mediaRecorder;
 let audioChunks = [];
 
-let recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
+
+if (!SpeechRecognition) {
+    status.textContent = "このブラウザは音声認識に対応していません。";
+}
+
+let recognition = new SpeechRecognition();
 
 recognition.lang = "en-US";
 recognition.continuous = false;
