@@ -25,9 +25,21 @@ recognition.lang = "en-US";
 recognition.continuous = false;
 recognition.interimResults = false;
 
+recognition.onstart = () => {
+    status.textContent = "🎤 音声認識中です…";
+};
+
 recognition.onresult = (event) => {
     const text = event.results[0][0].transcript;
     status.textContent = "認識結果：" + text;
+};
+
+recognition.onend = () => {
+    status.textContent = "音声認識が終了しました。";
+};
+
+recognition.onerror = (event) => {
+    status.textContent = "音声認識エラー：" + event.error;
 };
 
 recognition.onerror = (event) => {
