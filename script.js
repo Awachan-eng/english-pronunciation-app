@@ -1,3 +1,14 @@
+const result = document.getElementById("result");
+
+result.innerHTML =
+    "<p>音声認識の対応状況</p>" +
+    "<p>SpeechRecognition：" +
+    (window.SpeechRecognition ? "対応" : "非対応") +
+    "</p>" +
+    "<p>webkitSpeechRecognition：" +
+    (window.webkitSpeechRecognition ? "対応" : "非対応") +
+    "</p>";
+
 const sampleButton = document.getElementById("sampleButton");
 const recordButton = document.getElementById("recordButton");
 const status = document.getElementById("status");
