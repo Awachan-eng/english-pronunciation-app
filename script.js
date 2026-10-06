@@ -12,6 +12,21 @@ sampleButton.addEventListener("click", () => {
 let mediaRecorder;
 let audioChunks = [];
 
+let recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+
+recognition.lang = "en-US";
+recognition.continuous = false;
+recognition.interimResults = false;
+
+recognition.onresult = (event) => {
+    const text = event.results[0][0].transcript;
+    status.textContent = "認識結果：" + text;
+};
+
+recognition.onerror = (event) => {
+    console.log("音声認識エラー:", event.error);
+};
+
 recordButton.addEventListener("click", async () => {
 
     if (!mediaRecorder || mediaRecorder.state === "inactive") {
@@ -46,6 +61,8 @@ recordButton.addEventListener("click", async () => {
             });
 
             mediaRecorder.start();
+
+            recognition.start();
 
             recordButton.textContent = "⏹ 録音停止";
             status.textContent = "🔴 録音中です！";
