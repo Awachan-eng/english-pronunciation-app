@@ -36,7 +36,8 @@ recognition.onresult = (event) => {
 };
 
 recognition.onend = () => {
-    status.textContent = "音声認識が終了しました。";
+    status.textContent = "【テスト】音声認識が終了しました。";
+};
 };
 
 recognition.onerror = (event) => {
