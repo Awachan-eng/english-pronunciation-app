@@ -4,7 +4,7 @@ const status = document.getElementById("status");
 const audioPlayer = document.getElementById("audioPlayer");
 
 sampleButton.addEventListener("click", () => {
-    const sampleAudio = new Audio("sample.mp3");
+    const sampleAudio = new Audio("ttsmaker-file-2026-10-6-11-6-27.mp3");
     sampleAudio.play();
     status.textContent = "🔊 お手本を再生中です！";
 });
