@@ -25,23 +25,35 @@ if (SpeechRecognition) {
 
     recognition.onresult = (event) => {
     const text = event.results[0][0].transcript;
-
     const correctText = "I want to go to the park.";
 
     status.textContent = "認識結果：" + text;
 
     const result = document.getElementById("result");
 
-    if (text.toLowerCase().trim() === correctText.toLowerCase().trim()) {
-        result.innerHTML = "✅ 正しく認識されました！";
-    } else {
-        result.innerHTML =
-            "❌ 認識された文：<br>" +
-            text +
-            "<br><br>" +
-            "⭕ 正解：<br>" +
-            correctText;
-    }
+    const spokenWords = text
+        .toLowerCase()
+        .replace(/[.,!?]/g, "")
+        .split(/\s+/);
+
+    const correctWords = correctText
+        .toLowerCase()
+        .replace(/[.,!?]/g, "")
+        .split(/\s+/);
+
+    let html = "";
+
+    correctWords.forEach((word, index) => {
+        if (spokenWords[index] === word) {
+            html += `<span>${word}</span> `;
+        } else {
+            html += `<span class="wrong">${word}</span> `;
+        }
+    });
+
+    result.innerHTML =
+        "<p>あなたの発音：</p>" +
+        html;
 };
 
     recognition.onerror = (event) => {
