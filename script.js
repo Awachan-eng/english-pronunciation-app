@@ -32,19 +32,29 @@ recordButton.addEventListener("click", async () => {
 
             mediaRecorder.addEventListener("stop", () => {
 
-                const audioBlob = new Blob(audioChunks, {
-                    type: "audio/webm"
-                });
+    const audioBlob = new Blob(audioChunks, {
+        type: "audio/webm"
+    });
 
-                const audioURL = URL.createObjectURL(audioBlob);
+    const audioURL = URL.createObjectURL(audioBlob);
 
-                audioPlayer.src = audioURL;
+    audioPlayer.src = audioURL;
 
-                status.textContent =
-                    "録音完了！音声を再生できます。";
+    audioPlayer.onloadedmetadata = () => {
 
-                stream.getTracks().forEach(track => track.stop());
-            });
+        const duration = audioPlayer.duration;
+
+        status.textContent =
+            "録音完了！";
+
+        document.getElementById("result").innerHTML =
+            "<p>録音時間：" +
+            duration.toFixed(2) +
+            "秒</p>";
+    };
+
+    stream.getTracks().forEach(track => track.stop());
+});
 
             mediaRecorder.start();
 
