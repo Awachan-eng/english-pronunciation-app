@@ -13,6 +13,8 @@ const sampleButton = document.getElementById("sampleButton");
 const recordButton = document.getElementById("recordButton");
 const status = document.getElementById("status");
 const audioPlayer = document.getElementById("audioPlayer");
+const recognitionButton =
+    document.getElementById("recognitionButton");
 
 let mediaRecorder;
 let audioChunks = [];
@@ -176,4 +178,47 @@ result.innerHTML =
         recordButton.textContent =
             "🎤 録音開始";
     }
+});
+
+recognitionButton.addEventListener("click", () => {
+    const SpeechRecognition =
+        window.SpeechRecognition ||
+        window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+        status.textContent =
+            "このブラウザは音声認識に対応していません。";
+        return;
+    }
+
+    const recognition = new SpeechRecognition();
+
+    recognition.lang = "en-US";
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    recognition.onstart = () => {
+        status.textContent =
+            "🎤 英語を話してください！";
+    };
+
+    recognition.onresult = (event) => {
+        const text =
+            event.results[0][0].transcript;
+
+        result.innerHTML =
+            "<p>認識結果：</p><p>" +
+            text +
+            "</p>";
+
+        status.textContent =
+            "音声認識が完了しました。";
+    };
+
+    recognition.onerror = (event) => {
+        status.textContent =
+            "音声認識エラー：" + event.error;
+    };
+
+    recognition.start();
 });
