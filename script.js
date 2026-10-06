@@ -41,15 +41,7 @@ recordButton.addEventListener("click", async () => {
                 status.textContent = "音声を解析しています……";
 
                 if (window.recognition) {
-    try {
-        window.recognition.start();
-        status.textContent = "🎤 音声認識を開始しました！";
-    } catch (error) {
-        console.error(error);
-        status.textContent = "音声認識を開始できませんでした。";
-    }
-} else {
-    status.textContent = "音声認識が利用できません。";
+    window.recognition.stop();
                 }
 
                 stream.getTracks().forEach(track => track.stop());
@@ -59,6 +51,14 @@ recordButton.addEventListener("click", async () => {
 
             recordButton.textContent = "⏹ 録音停止";
             status.textContent = "🔴 録音中です！";
+
+            if (window.recognition) {
+    try {
+        window.recognition.start();
+    } catch (error) {
+        console.error(error);
+    }
+            }
 
         } catch (error) {
             console.error(error);
