@@ -24,7 +24,7 @@ recognition.onresult = (event) => {
 };
 
 recognition.onerror = (event) => {
-    console.log("音声認識エラー:", event.error);
+    status.textContent = "音声認識エラー：" + event.error;
 };
 
 recordButton.addEventListener("click", async () => {
