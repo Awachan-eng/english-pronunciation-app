@@ -30,6 +30,7 @@ recognition.onstart = () => {
 };
 
 recognition.onresult = (event) => {
+    console.log(event);
     const text = event.results[0][0].transcript;
     status.textContent = "認識結果：" + text;
 };
