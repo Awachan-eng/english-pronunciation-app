@@ -36,7 +36,11 @@ recordButton.addEventListener("click", async () => {
                 const audioURL = URL.createObjectURL(audioBlob);
                 audioPlayer.src = audioURL;
 
-                status.textContent = "録音完了！再生してみてください。";
+                status.textContent = "音声を解析しています……";
+
+                if (window.recognition) {
+    window.recognition.start();
+                }
 
                 stream.getTracks().forEach(track => track.stop());
             });
