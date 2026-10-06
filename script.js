@@ -61,8 +61,16 @@ if (SpeechRecognition) {
     };
 
     recognition.onend = () => {
-        console.log("音声認識終了");
-    };
+    status.textContent = "⚠️ 音声認識が終了しました";
+};
+
+recognition.onspeechstart = () => {
+    status.textContent = "👂 声を検出しました！";
+};
+
+recognition.onspeechend = () => {
+    status.textContent = "⏳ 声の検出が終了しました。";
+};
 }
 
 // 録音
