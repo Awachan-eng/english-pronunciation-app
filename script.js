@@ -24,9 +24,25 @@ if (SpeechRecognition) {
     recognition.interimResults = false;
 
     recognition.onresult = (event) => {
-        const text = event.results[0][0].transcript;
-        status.textContent = "認識結果：" + text;
-    };
+    const text = event.results[0][0].transcript;
+
+    const correctText = "I want to go to the park.";
+
+    status.textContent = "認識結果：" + text;
+
+    const result = document.getElementById("result");
+
+    if (text.toLowerCase().trim() === correctText.toLowerCase().trim()) {
+        result.innerHTML = "✅ 正しく認識されました！";
+    } else {
+        result.innerHTML =
+            "❌ 認識された文：<br>" +
+            text +
+            "<br><br>" +
+            "⭕ 正解：<br>" +
+            correctText;
+    }
+};
 
     recognition.onerror = (event) => {
         status.textContent = "音声認識エラー：" + event.error;
