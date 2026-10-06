@@ -56,3 +56,30 @@ recordButton.addEventListener("click", async () => {
         recordButton.textContent = "🎤 録音開始";
     }
 });
+
+// 音声認識
+const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
+
+if (SpeechRecognition) {
+    const recognition = new SpeechRecognition();
+
+    recognition.lang = "en-US";
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    recognition.onresult = (event) => {
+        const text = event.results[0][0].transcript;
+        status.textContent = "認識結果：" + text;
+    };
+
+    recognition.onerror = (event) => {
+        status.textContent = "音声認識エラー：" + event.error;
+    };
+
+    recognition.onend = () => {
+        console.log("音声認識終了");
+    };
+
+    window.recognition = recognition;
+}
