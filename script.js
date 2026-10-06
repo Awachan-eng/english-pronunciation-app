@@ -202,18 +202,37 @@ recognitionButton.addEventListener("click", () => {
             "🎤 英語を話してください！";
     };
 
-    recognition.onresult = (event) => {
-        const text =
-            event.results[0][0].transcript;
+    
+recognition.onresult = (event) => {
+    const text = event.results[0][0].transcript;
+    const correctText = "I want to go to the park.";
 
-        result.innerHTML =
-            "<p>認識結果：</p><p>" +
-            text +
-            "</p>";
+    const spokenWords = text
+        .toLowerCase()
+        .replace(/[.,!?]/g, "")
+        .split(/\s+/);
 
-        status.textContent =
-            "音声認識が完了しました。";
-    };
+    const correctWords = correctText
+        .toLowerCase()
+        .replace(/[.,!?]/g, "")
+        .split(/\s+/);
+
+    let html = "";
+
+    correctWords.forEach((word, index) => {
+        if (spokenWords[index] === word) {
+            html += `<span>${word}</span> `;
+        } else {
+            html += `<span class="wrong">${word}</span> `;
+        }
+    });
+
+    result.innerHTML =
+        "<p>認識結果：</p><p>" + text + "</p>" +
+        "<p>お手本との比較：</p><p>" + html + "</p>";
+
+    status.textContent = "比較が完了しました。";
+};
 
     recognition.onerror = (event) => {
         status.textContent =
