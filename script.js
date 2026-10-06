@@ -1,6 +1,13 @@
+const sampleButton = document.getElementById("sampleButton");
 const recordButton = document.getElementById("recordButton");
 const status = document.getElementById("status");
 const audioPlayer = document.getElementById("audioPlayer");
+
+sampleButton.addEventListener("click", () => {
+    const sampleAudio = new Audio("sample.mp3");
+    sampleAudio.play();
+    status.textContent = "🔊 お手本を再生中です！";
+});
 
 let mediaRecorder;
 let audioChunks = [];
