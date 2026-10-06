@@ -1,3 +1,5 @@
+alert("新しいscript.jsが読み込まれました");
+
 const sampleButton = document.getElementById("sampleButton");
 const recordButton = document.getElementById("recordButton");
 const status = document.getElementById("status");
