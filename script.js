@@ -1,5 +1,3 @@
-alert("最新版です！");
-
 const sampleButton = document.getElementById("sampleButton");
 const recordButton = document.getElementById("recordButton");
 const status = document.getElementById("status");
@@ -12,76 +10,14 @@ sampleButton.addEventListener("click", () => {
     status.textContent = "🔊 お手本を再生中です！";
 });
 
-// 録音
-let mediaRecorder;
-let audioChunks = [];
-
-recordButton.addEventListener("click", async () => {
-    if (!mediaRecorder || mediaRecorder.state === "inactive") {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({
-                audio: true
-            });
-
-            mediaRecorder = new MediaRecorder(stream);
-            audioChunks = [];
-
-            mediaRecorder.addEventListener("dataavailable", (event) => {
-                audioChunks.push(event.data);
-            });
-
-            mediaRecorder.addEventListener("stop", () => {
-                const audioBlob = new Blob(audioChunks, {
-                    type: "audio/webm"
-                });
-
-                const audioURL = URL.createObjectURL(audioBlob);
-                audioPlayer.src = audioURL;
-
-                status.textContent = "音声を解析しています……";
-
-                if (window.recognition) {
-    window.recognition.stop();
-                }
-
-                stream.getTracks().forEach(track => track.stop());
-            });
-
-            mediaRecorder.start();
-
-            recordButton.textContent = "⏹ 録音停止";
-            status.textContent = "🔴 録音中です！";
-
-            if (window.recognition) {
-    try {
-        window.recognition.start();
-        status.textContent = "🎤 音声認識を開始しました！";
-    } catch (error) {
-        console.error(error);
-        status.textContent = "音声認識開始エラー：" + error.message;
-    }
-} else {
-    status.textContent = "音声認識が利用できません。";
-            }
-            }
-
-        } catch (error) {
-            console.error(error);
-            status.textContent = "マイクを使用できませんでした。";
-        }
-
-    } else {
-        mediaRecorder.stop();
-        recordButton.textContent = "🎤 録音開始";
-    }
-});
-
 // 音声認識
 const SpeechRecognition =
     window.SpeechRecognition || window.webkitSpeechRecognition;
 
+let recognition = null;
+
 if (SpeechRecognition) {
-    const recognition = new SpeechRecognition();
+    recognition = new SpeechRecognition();
 
     recognition.lang = "en-US";
     recognition.continuous = false;
@@ -99,6 +35,70 @@ if (SpeechRecognition) {
     recognition.onend = () => {
         console.log("音声認識終了");
     };
-
-    window.recognition = recognition;
 }
+
+// 録音
+let mediaRecorder;
+let audioChunks = [];
+
+recordButton.addEventListener("click", async () => {
+
+    // 録音開始
+    if (!mediaRecorder || mediaRecorder.state === "inactive") {
+
+        // まず音声認識を開始
+        if (recognition) {
+            try {
+                recognition.start();
+                status.textContent = "🎤 音声認識中です！話してください。";
+            } catch (error) {
+                console.error(error);
+            }
+        } else {
+            status.textContent = "音声認識が利用できません。";
+        }
+
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: true
+            });
+
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
+
+            mediaRecorder.addEventListener("dataavailable", (event) => {
+                audioChunks.push(event.data);
+            });
+
+            mediaRecorder.addEventListener("stop", () => {
+
+                const audioBlob = new Blob(audioChunks, {
+                    type: "audio/webm"
+                });
+
+                const audioURL = URL.createObjectURL(audioBlob);
+                audioPlayer.src = audioURL;
+
+                if (recognition) {
+                    recognition.stop();
+                }
+
+                stream.getTracks().forEach(track => track.stop());
+            });
+
+            mediaRecorder.start();
+
+            recordButton.textContent = "⏹ 録音停止";
+
+        } catch (error) {
+            console.error(error);
+            status.textContent = "マイクを使用できませんでした。";
+        }
+
+    } else {
+
+        // 録音停止
+        mediaRecorder.stop();
+        recordButton.textContent = "🎤 録音開始";
+    }
+});
