@@ -82,7 +82,16 @@ recordButton.addEventListener("click", async () => {
                         audioPlayer.duration;
 
                     status.textContent =
-                        "録音完了！";
+    "録音完了！音声認識を確認します。";
+
+result.innerHTML =
+    "<p>音声認識の対応状況を確認中です。</p>" +
+    "<p>SpeechRecognition：" +
+    (window.SpeechRecognition ? "対応" : "非対応") +
+    "</p>" +
+    "<p>webkitSpeechRecognition：" +
+    (window.webkitSpeechRecognition ? "対応" : "非対応") +
+    "</p>";
 
                     result.innerHTML =
                         "<p>録音時間：" +
