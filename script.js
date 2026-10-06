@@ -39,7 +39,15 @@ recordButton.addEventListener("click", async () => {
                 status.textContent = "音声を解析しています……";
 
                 if (window.recognition) {
-    window.recognition.start();
+    try {
+        window.recognition.start();
+        status.textContent = "🎤 音声認識を開始しました！";
+    } catch (error) {
+        console.error(error);
+        status.textContent = "音声認識を開始できませんでした。";
+    }
+} else {
+    status.textContent = "音声認識が利用できません。";
                 }
 
                 stream.getTracks().forEach(track => track.stop());
