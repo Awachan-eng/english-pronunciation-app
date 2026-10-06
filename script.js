@@ -13,7 +13,6 @@ const sampleButton = document.getElementById("sampleButton");
 const recordButton = document.getElementById("recordButton");
 const status = document.getElementById("status");
 const audioPlayer = document.getElementById("audioPlayer");
-const result = document.getElementById("result");
 
 let mediaRecorder;
 let audioChunks = [];
