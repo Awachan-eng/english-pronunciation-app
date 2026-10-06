@@ -82,9 +82,7 @@ recordButton.addEventListener("click", async () => {
 
             mediaRecorder.start();
 
-            setTimeout(() => {
-    recognition.start();
-}, 1000);
+            recognition.start();
 
             recordButton.textContent = "⏹ 録音停止";
             status.textContent = "🔴 録音中です！";
