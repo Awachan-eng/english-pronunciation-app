@@ -84,6 +84,8 @@ recordButton.addEventListener("click", async () => {
 
             recognition.start();
 
+status.textContent = "音声認識を開始しました！";
+
             recordButton.textContent = "⏹ 録音停止";
             status.textContent = "🔴 録音中です！";
 
