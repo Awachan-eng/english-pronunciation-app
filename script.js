@@ -54,8 +54,7 @@ recordButton.addEventListener("click", async () => {
 
                 audioPlayer.src = audioURL;
 
-                status.textContent =
-                    "録音完了！再生してみてください。";
+                status.textContent = "音声を解析しています……";
 
                 stream.getTracks().forEach(track => track.stop());
             });
