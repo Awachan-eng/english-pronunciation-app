@@ -55,9 +55,14 @@ recordButton.addEventListener("click", async () => {
             if (window.recognition) {
     try {
         window.recognition.start();
+        status.textContent = "🎤 音声認識を開始しました！";
     } catch (error) {
         console.error(error);
+        status.textContent = "音声認識開始エラー：" + error.message;
     }
+} else {
+    status.textContent = "音声認識が利用できません。";
+            }
             }
 
         } catch (error) {
