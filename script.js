@@ -74,11 +74,6 @@ recordButton.addEventListener("click", async () => {
                 status.textContent =
                     "録音を保存しました。音声認識結果を確認してください。";
             }
-
-            if (micStream) {
-                micStream.getTracks().forEach(track => track.stop());
-                micStream = null;
-            }
         });
 
         mediaRecorder.start();
