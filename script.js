@@ -241,3 +241,17 @@ recognition.onresult = (event) => {
 
     recognition.start();
 });
+
+const retryButton = document.getElementById("retryButton");
+
+retryButton.addEventListener("click", () => {
+    result.innerHTML = "";
+    status.textContent = "録音待機中";
+    audioPlayer.pause();
+    audioPlayer.currentTime = 0;
+    audioPlayer.src = "";
+
+    audioChunks = [];
+
+    alert("もう一度、お手本を聞いて練習しましょう！");
+});
