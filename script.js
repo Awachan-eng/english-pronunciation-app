@@ -151,6 +151,22 @@ recordButton.addEventListener("click", async () => {
     }
 };
 
+        recognition.onstart = () => {
+    status.textContent = "音声認識を開始しました。英語を話してください。";
+};
+
+recognition.onend = () => {
+    if (micStream) {
+        micStream.getTracks().forEach(track => track.stop());
+        micStream = null;
+    }
+
+    if (!recognitionResultReceived) {
+        status.textContent =
+            "音声認識が終了しましたが、結果を受け取れませんでした。";
+    }
+};
+
         recognition.start();
 
     } catch (error) {
