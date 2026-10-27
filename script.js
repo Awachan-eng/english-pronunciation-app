@@ -10,6 +10,7 @@ let micStream = null;
 let recognition = null;
 let isRecording = false;
 let recognitionResultReceived = false;
+let recognitionError = "";
 
 const SpeechRecognition =
     window.SpeechRecognition ||
@@ -142,13 +143,9 @@ recordButton.addEventListener("click", async () => {
         };
 
         recognition.onerror = (event) => {
-    if (event.error === "no-speech") {
-        status.textContent =
-            "音声認識エラー：音声を検出できませんでした（no-speech）";
-    } else if (event.error !== "aborted") {
-        status.textContent =
-            "音声認識エラー：" + event.error;
-    }
+    recognitionError = event.error;
+    status.textContent =
+        "音声認識エラー：" + event.error;
 };
 
         recognition.onstart = () => {
