@@ -1,4 +1,3 @@
-
 const result = document.getElementById("result");
 const sampleButton = document.getElementById("sampleButton");
 const recordButton = document.getElementById("recordButton");
@@ -143,12 +142,14 @@ recordButton.addEventListener("click", async () => {
         };
 
         recognition.onerror = (event) => {
-            if (event.error !== "no-speech" &&
-                event.error !== "aborted") {
-                status.textContent =
-                    "音声認識エラー：" + event.error;
-            }
-        };
+    if (event.error === "no-speech") {
+        status.textContent =
+            "音声認識エラー：音声を検出できませんでした（no-speech）";
+    } else if (event.error !== "aborted") {
+        status.textContent =
+            "音声認識エラー：" + event.error;
+    }
+};
 
         recognition.start();
 
