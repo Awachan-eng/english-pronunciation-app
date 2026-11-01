@@ -159,6 +159,13 @@ recognition.onend = () => {
     }
 
     if (!recognitionResultReceived) {
+        status.textContent = recognitionError
+            ? "音声認識エラー：" + recognitionError
+            : "音声認識が終了しましたが、結果を受け取れませんでした（エラー情報なし）。";
+    }
+};
+
+    if (!recognitionResultReceived) {
         status.textContent =
             "音声認識が終了しましたが、結果を受け取れませんでした。";
     }
