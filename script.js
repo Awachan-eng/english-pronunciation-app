@@ -149,9 +149,10 @@ recordButton.addEventListener("click", async () => {
         };
 
         recognition.onstart = () => {
-            status.textContent =
-                "音声認識を開始しました。英語を話してください。";
-        };
+    status.textContent =
+        "音声認識を開始しました。英語を話してください。";
+    console.log("音声認識 onstart が実行されました");
+};
 
         recognition.onend = () => {
             if (micStream) {
