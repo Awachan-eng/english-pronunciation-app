@@ -142,34 +142,29 @@ recordButton.addEventListener("click", async () => {
             status.textContent = "認識結果を表示しました。";
         };
 
-        recognition.onerror = (event) => {
-    recognitionError = event.error;
-    status.textContent =
-        "音声認識エラー：" + event.error;
-};
+                recognition.onerror = (event) => {
+            recognitionError = event.error;
+            status.textContent =
+                "音声認識エラー：" + event.error;
+        };
 
         recognition.onstart = () => {
-    status.textContent = "音声認識を開始しました。英語を話してください。";
-};
+            status.textContent =
+                "音声認識を開始しました。英語を話してください。";
+        };
 
-recognition.onend = () => {
-    if (micStream) {
-        micStream.getTracks().forEach(track => track.stop());
-        micStream = null;
-    }
+        recognition.onend = () => {
+            if (micStream) {
+                micStream.getTracks().forEach(track => track.stop());
+                micStream = null;
+            }
 
-    if (!recognitionResultReceived) {
-        status.textContent = recognitionError
-            ? "音声認識エラー：" + recognitionError
-            : "音声認識が終了しましたが、結果を受け取れませんでした（エラー情報なし）。";
-    }
-};
-
-    if (!recognitionResultReceived) {
-        status.textContent =
-            "音声認識が終了しましたが、結果を受け取れませんでした。";
-    }
-};
+            if (!recognitionResultReceived) {
+                status.textContent = recognitionError
+                    ? "音声認識エラー：" + recognitionError
+                    : "音声認識が終了しましたが、結果を受け取れませんでした（エラー情報なし）。";
+            }
+        };
 
         recognition.start();
 
