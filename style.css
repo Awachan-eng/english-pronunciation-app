@@ -43,16 +43,10 @@ button {
     background: #eee;
 }
 
-#phraseSampleButton {
-    background: #eee;
-}
-
 #recordButton {
     background: #ddd;
 }
 
-#prevButton,
-#nextButton,
 #retryButton {
     background: #eee;
 }
@@ -62,38 +56,37 @@ button {
     font-weight: bold;
 }
 
-audio {
-    width: 100%;
-    margin-top: 20px;
-}
-
 .wrong {
     color: red;
     font-weight: bold;
 }
 
-.word-list {
+.total-score {
+    margin-top: 10px;
+    font-size: 22px;
+    font-weight: bold;
+    color: #1976d2;
+}
+
+#result {
+    margin-top: 20px;
+    text-align: left;
+}
+
+.word-row {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
     gap: 8px;
-    margin: 10px 0 20px;
+    margin: 14px 0;
 }
 
 .word-chip {
     display: inline-block;
-    width: auto;
-    margin: 0;
     padding: 10px 14px;
     font-size: 18px;
     background: #f0f0f0;
-    border: 2px solid transparent;
     border-radius: 999px;
-}
-
-.word-chip.current {
-    border-color: #1976d2;
-    background: #e3f2fd;
 }
 
 .word-chip.good {
@@ -108,65 +101,10 @@ audio {
     background: #ffcdd2;
 }
 
-.word-chip.current.good,
-.word-chip.current.mid,
-.word-chip.current.bad {
-    border-color: #1976d2;
-}
-
-.current-info {
+.issue-list {
     margin: 10px 0;
-    min-height: 40px;
-}
-
-.current-word {
-    font-size: 32px;
-    font-weight: bold;
-}
-
-.ipa {
-    margin-left: 10px;
-    font-size: 20px;
-    color: #666;
-}
-
-.progress-text {
-    display: block;
-    margin-top: 4px;
-    font-size: 14px;
-    color: #888;
-}
-
-.nav-row {
-    display: flex;
-    gap: 10px;
-}
-
-.nav-row button {
-    flex: 1;
-    width: auto;
-}
-
-.total-score {
-    margin-top: 10px;
-    font-size: 20px;
-    font-weight: bold;
-    color: #1976d2;
-}
-
-#result {
-    margin-top: 20px;
-    text-align: left;
-}
-
-.score-line {
-    font-size: 20px;
-    font-weight: bold;
-}
-
-.score-number {
-    font-size: 36px;
-    color: #1976d2;
+    padding-left: 20px;
+    line-height: 1.7;
 }
 
 .note {
@@ -221,4 +159,13 @@ audio {
 
 .common {
     color: #c62828;
+}
+
+.tip-listen {
+    display: inline-block;
+    width: auto;
+    margin: 4px 6px 4px 0;
+    padding: 8px 14px;
+    font-size: 15px;
+    background: #eee;
 }
