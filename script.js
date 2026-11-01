@@ -1,55 +1,215 @@
 const result = document.getElementById("result");
 const sampleButton = document.getElementById("sampleButton");
 const recordButton = document.getElementById("recordButton");
-const status = document.getElementById("status");
+const retryButton = document.getElementById("retryButton");
+const statusText = document.getElementById("status");
 const audioPlayer = document.getElementById("audioPlayer");
+
+const correctText = "I want to go to the park.";
+
+const SpeechRecognitionClass =
+    window.SpeechRecognition ||
+    window.webkitSpeechRecognition;
 
 let mediaRecorder = null;
 let audioChunks = [];
 let micStream = null;
 let recognition = null;
 let isRecording = false;
+let recognitionRunning = false;
 let recognitionResultReceived = false;
 let recognitionError = "";
+let recognitionFatal = false;
+let finalText = "";
 
-const SpeechRecognition =
-    window.SpeechRecognition ||
-    window.webkitSpeechRecognition;
+function escapeHtml(text) {
+    return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+}
 
-sampleButton.addEventListener("click", () => {
-    const sampleAudio =
-        new Audio("ttsmaker-file-2026-10-6-11-6-27.mp3");
+function normalizeWords(text) {
+    return text
+        .toLowerCase()
+        .replace(/[^a-z0-9'\s]/g, " ")
+        .trim()
+        .split(/\s+/)
+        .filter((word) => word.length > 0);
+}
 
-    sampleAudio.play();
-    status.textContent = "🔊 お手本を再生中です！";
-});
+function findMatchedIndexes(correctWords, spokenWords) {
+    const n = correctWords.length;
+    const m = spokenWords.length;
+    const dp = [];
 
-recordButton.addEventListener("click", async () => {
-    if (isRecording) {
-        isRecording = false;
+    for (let i = 0; i <= n; i++) {
+        dp.push(new Array(m + 1).fill(0));
+    }
 
-        if (mediaRecorder &&
-            mediaRecorder.state === "recording") {
-            mediaRecorder.stop();
+    for (let i = n - 1; i >= 0; i--) {
+        for (let j = m - 1; j >= 0; j--) {
+            if (correctWords[i] === spokenWords[j]) {
+                dp[i][j] = dp[i + 1][j + 1] + 1;
+            } else {
+                dp[i][j] = Math.max(dp[i + 1][j], dp[i][j + 1]);
+            }
         }
+    }
 
-        if (recognition) {
-            try {
-                recognition.stop();
-            } catch (error) {
-                console.log(error);
+    const matched = new Array(n).fill(false);
+    let i = 0;
+    let j = 0;
+
+    while (i < n && j < m) {
+        if (correctWords[i] === spokenWords[j]) {
+            matched[i] = true;
+            i++;
+            j++;
+        } else if (dp[i + 1][j] >= dp[i][j + 1]) {
+            i++;
+        } else {
+            j++;
+        }
+    }
+
+    return matched;
+}
+
+function renderResult() {
+    const spokenWords = normalizeWords(finalText);
+    const correctWords = normalizeWords(correctText);
+    const matched = findMatchedIndexes(correctWords, spokenWords);
+
+    let comparisonHTML = "";
+    let matchedCount = 0;
+
+    correctWords.forEach((word, index) => {
+        if (matched[index]) {
+            matchedCount++;
+            comparisonHTML += `<span>${word}</span> `;
+        } else {
+            comparisonHTML += `<span class="wrong">${word}</span> `;
+        }
+    });
+
+    result.innerHTML =
+        "<p>認識結果：</p><p>" +
+        escapeHtml(finalText.trim()) +
+        "</p><p>お手本との比較：</p><p>" +
+        comparisonHTML +
+        "</p><p>" +
+        matchedCount +
+        " / " +
+        correctWords.length +
+        " 語 一致</p>";
+}
+
+function releaseMic() {
+    if (micStream) {
+        micStream.getTracks().forEach((track) => track.stop());
+        micStream = null;
+    }
+}
+
+function finalizeStatus() {
+    if (recognitionResultReceived) {
+        statusText.textContent =
+            "認識結果を表示しました。録音も保存しました。";
+    } else if (!SpeechRecognitionClass) {
+        statusText.textContent =
+            "録音を保存しました。このブラウザは音声認識に対応していません。";
+    } else if (recognitionError) {
+        statusText.textContent =
+            "音声認識エラー：" + recognitionError + "（録音は保存しました）";
+    } else {
+        statusText.textContent =
+            "録音は保存しましたが、認識結果は受け取れませんでした。";
+    }
+}
+
+function startRecognition() {
+    recognition = new SpeechRecognitionClass();
+    recognition.lang = "en-US";
+    recognition.continuous = true;
+    recognition.interimResults = false;
+
+    recognition.onstart = () => {
+        recognitionRunning = true;
+    };
+
+    recognition.onresult = (event) => {
+        let text = "";
+
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+            if (event.results[i].isFinal) {
+                text += event.results[i][0].transcript + " ";
             }
         }
 
-        recordButton.textContent = "🎤 録音・認識を開始";
-        status.textContent = "録音を終了しました。結果を処理しています…";
-        return;
-    }
+        if (!text.trim()) return;
 
+        recognitionResultReceived = true;
+        finalText += text;
+        renderResult();
+
+        if (isRecording) {
+            statusText.textContent =
+                "🔴 録音・音声認識中です。続けて話すか、終了を押してください。";
+        }
+    };
+
+    recognition.onerror = (event) => {
+        recognitionError = event.error;
+
+        if (event.error === "no-speech" || event.error === "aborted") {
+            return;
+        }
+
+        recognitionFatal = true;
+
+        if (isRecording) {
+            statusText.textContent =
+                "音声認識エラー：" +
+                event.error +
+                "（録音は続いています）";
+        }
+    };
+
+    recognition.onend = () => {
+        recognitionRunning = false;
+
+        if (isRecording && !recognitionFatal) {
+            setTimeout(() => {
+                if (isRecording && !recognitionFatal) {
+                    try {
+                        startRecognition();
+                    } catch (error) {
+                        recognitionError = String(error);
+                        recognitionFatal = true;
+                    }
+                }
+            }, 150);
+            return;
+        }
+
+        if (!isRecording) {
+            finalizeStatus();
+        }
+    };
+
+    recognition.start();
+}
+
+async function startRecording() {
     try {
         result.innerHTML = "";
         audioChunks = [];
+        finalText = "";
         recognitionResultReceived = false;
+        recognitionError = "";
+        recognitionFatal = false;
+        recognitionRunning = false;
 
         micStream = await navigator.mediaDevices.getUserMedia({
             audio: true
@@ -69,140 +229,92 @@ recordButton.addEventListener("click", async () => {
             });
 
             audioPlayer.src = URL.createObjectURL(audioBlob);
+            releaseMic();
 
-            if (!recognitionResultReceived) {
-                status.textContent =
-                    "録音を保存しました。音声認識結果を確認してください。";
+            if (!recognitionRunning) {
+                finalizeStatus();
             }
         });
 
         mediaRecorder.start();
         isRecording = true;
         recordButton.textContent = "⏹ 録音・認識を終了";
-        status.textContent = "🔴 録音・音声認識中です。英語を話してください！";
+        statusText.textContent =
+            "🔴 録音・音声認識中です。英語を話してください！";
 
-        if (!SpeechRecognition) {
-            status.textContent =
+        if (SpeechRecognitionClass) {
+            startRecognition();
+        } else {
+            statusText.textContent =
                 "録音中です。音声認識はこのブラウザで利用できません。";
-            return;
         }
-
-        recognition = new SpeechRecognition();
-        recognition.lang = "en-US";
-        recognition.continuous = true;
-        recognition.interimResults = false;
-
-        recognition.onresult = (event) => {
-            let text = "";
-
-            for (
-                let i = event.resultIndex;
-                i < event.results.length;
-                i++
-            ) {
-                if (event.results[i].isFinal) {
-                    text += event.results[i][0].transcript + " ";
-                }
-            }
-
-            if (!text.trim()) return;
-
-            recognitionResultReceived = true;
-
-            const correctText = "I want to go to the park.";
-
-            const spokenWords = text
-                .toLowerCase()
-                .replace(/[.,!?]/g, "")
-                .trim()
-                .split(/\s+/);
-
-            const correctWords = correctText
-                .toLowerCase()
-                .replace(/[.,!?]/g, "")
-                .split(/\s+/);
-
-            let comparisonHTML = "";
-
-            correctWords.forEach((word, index) => {
-                if (spokenWords[index] === word) {
-                    comparisonHTML += `<span>${word}</span> `;
-                } else {
-                    comparisonHTML += `<span class="wrong">${word}</span> `;
-                }
-            });
-
-            result.innerHTML =
-                "<p>認識結果：</p><p>" +
-                text.trim() +
-                "</p><p>お手本との比較：</p><p>" +
-                comparisonHTML +
-                "</p>";
-
-            status.textContent = "認識結果を表示しました。";
-        };
-
-                recognition.onerror = (event) => {
-            recognitionError = event.error;
-            status.textContent =
-                "音声認識エラー：" + event.error;
-        };
-
-        recognition.onstart = () => {
-    status.textContent =
-        "音声認識を開始しました。英語を話してください。";
-    console.log("音声認識 onstart が実行されました");
-};
-
-        recognition.onend = () => {
-            if (micStream) {
-                micStream.getTracks().forEach(track => track.stop());
-                micStream = null;
-            }
-
-            if (!recognitionResultReceived) {
-                status.textContent = recognitionError
-                    ? "音声認識エラー：" + recognitionError
-                    : "音声認識が終了しましたが、結果を受け取れませんでした（エラー情報なし）。";
-            }
-        };
-
-        recognition.start();
-
     } catch (error) {
         isRecording = false;
         recordButton.textContent = "🎤 録音・認識を開始";
 
-        if (mediaRecorder &&
-            mediaRecorder.state === "recording") {
+        if (mediaRecorder && mediaRecorder.state === "recording") {
             mediaRecorder.stop();
-        } else if (micStream) {
-            micStream.getTracks().forEach(track => track.stop());
-            micStream = null;
         }
 
-        status.textContent =
+        releaseMic();
+
+        statusText.textContent =
             "録音を開始できませんでした。マイクの許可を確認してください。";
         console.error(error);
     }
+}
+
+function stopRecording() {
+    isRecording = false;
+    recordButton.textContent = "🎤 録音・認識を開始";
+    statusText.textContent = "録音を終了しました。結果を処理しています…";
+
+    if (mediaRecorder && mediaRecorder.state === "recording") {
+        mediaRecorder.stop();
+    }
+
+    if (recognition && recognitionRunning) {
+        try {
+            recognition.stop();
+        } catch (error) {
+            console.log(error);
+        }
+    }
+}
+
+sampleButton.addEventListener("click", () => {
+    const sampleAudio =
+        new Audio("ttsmaker-file-2026-10-6-11-6-27.mp3");
+
+    sampleAudio.play();
+    statusText.textContent = "🔊 お手本を再生中です！";
 });
 
-const retryButton = document.getElementById("retryButton");
+recordButton.addEventListener("click", async () => {
+    if (isRecording) {
+        stopRecording();
+        return;
+    }
+
+    await startRecording();
+});
 
 retryButton.addEventListener("click", () => {
     if (isRecording) {
-        status.textContent =
-            "先に録音・認識を終了してください。";
+        statusText.textContent = "先に録音・認識を終了してください。";
         return;
     }
 
     result.innerHTML = "";
-    status.textContent = "録音待機中";
+    statusText.textContent = "録音待機中";
     audioPlayer.pause();
     audioPlayer.currentTime = 0;
     audioPlayer.removeAttribute("src");
     audioPlayer.load();
     audioChunks = [];
+    finalText = "";
+    recognitionResultReceived = false;
+    recognitionError = "";
 
     alert("もう一度、お手本を聞いて練習しましょう！");
 });
