@@ -1,3 +1,6 @@
+const VERSION = "3";
+const SAMPLE_AUDIO_FILE = "";
+
 const phraseElement = document.getElementById("phrase");
 const result = document.getElementById("result");
 const tipsElement = document.getElementById("tips");
@@ -173,6 +176,12 @@ let recognition = null;
 let isListening = false;
 let resultReceived = false;
 let lastError = "";
+let voices = [];
+let currentAudio = null;
+
+window.addEventListener("error", (event) => {
+    statusText.textContent = "プログラムエラー：" + event.message;
+});
 
 function escapeHtml(text) {
     return text
@@ -529,6 +538,89 @@ function clearOutput() {
     totalScoreElement.textContent = "";
 }
 
+function loadVoices() {
+    if ("speechSynthesis" in window) {
+        voices = window.speechSynthesis.getVoices();
+    }
+}
+
+function pickEnglishVoice() {
+    const normalized = (voice) =>
+        (voice.lang || "").toLowerCase().replace("_", "-");
+
+    const us = voices.filter((voice) => normalized(voice).startsWith("en-us"));
+
+    if (us.length > 0) return us[0];
+
+    const english = voices.filter((voice) => normalized(voice).startsWith("en"));
+
+    return english.length > 0 ? english[0] : null;
+}
+
+function stopAllSound() {
+    if ("speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+    }
+
+    if (currentAudio) {
+        currentAudio.pause();
+        currentAudio = null;
+    }
+}
+
+function speak(text, useFile) {
+    if (useFile && SAMPLE_AUDIO_FILE) {
+        stopAllSound();
+        currentAudio = new Audio(SAMPLE_AUDIO_FILE);
+        currentAudio.addEventListener("ended", () => {
+            statusText.textContent = "お手本の再生が終わりました。";
+        });
+        currentAudio.play().catch(() => {
+            statusText.textContent =
+                "お手本の音声ファイルを再生できませんでした。ファイル名を確認してください。";
+        });
+        statusText.textContent = "🔊 お手本を再生中です！";
+        return;
+    }
+
+    if (!("speechSynthesis" in window)) {
+        statusText.textContent =
+            "このブラウザはお手本の読み上げに対応していません。";
+        return;
+    }
+
+    stopAllSound();
+    loadVoices();
+
+    setTimeout(() => {
+        const utterance = new SpeechSynthesisUtterance(text);
+        const voice = pickEnglishVoice();
+
+        utterance.lang = "en-US";
+
+        if (voice) {
+            utterance.voice = voice;
+            utterance.lang = voice.lang;
+        }
+
+        utterance.rate = 0.85;
+
+        utterance.onend = () => {
+            statusText.textContent = "お手本の再生が終わりました。";
+        };
+
+        utterance.onerror = () => {
+            statusText.textContent = "お手本を再生できませんでした。";
+        };
+
+        window.speechSynthesis.speak(utterance);
+
+        statusText.textContent = voice
+            ? "🔊 お手本を再生中です！"
+            : "🔊 再生中です（端末に英語の音声が見つからないため、日本語の音声で読まれる可能性があります）";
+    }, 150);
+}
+
 function startRecognition() {
     if (!SpeechRecognitionClass) {
         statusText.textContent =
@@ -536,85 +628,83 @@ function startRecognition() {
         return;
     }
 
+    stopAllSound();
     clearOutput();
     resultReceived = false;
     lastError = "";
 
-    recognition = new SpeechRecognitionClass();
-    recognition.lang = "en-US";
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 5;
+    setTimeout(() => {
+        recognition = new SpeechRecognitionClass();
+        recognition.lang = "en-US";
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 5;
 
-    recognition.onstart = () => {
-        setListening(true);
-        statusText.textContent =
-            "🔴 認識中です。文全体を話してください！";
-    };
+        recognition.onstart = () => {
+            setListening(true);
+            statusText.textContent =
+                "🔴 認識中です。文全体を話してください！";
+        };
 
-    recognition.onresult = (event) => {
-        const list = event.results[0];
-        const alternatives = [];
+        recognition.onspeechstart = () => {
+            statusText.textContent =
+                "🔴 音声を検出しました。話し終わると結果が出ます。";
+        };
 
-        for (let k = 0; k < list.length; k++) {
-            alternatives.push({
-                transcript: list[k].transcript,
-                confidence: list[k].confidence
-            });
+        recognition.onresult = (event) => {
+            const list = event.results[0];
+            const alternatives = [];
+
+            for (let k = 0; k < list.length; k++) {
+                alternatives.push({
+                    transcript: list[k].transcript,
+                    confidence: list[k].confidence
+                });
+            }
+
+            if (alternatives.length === 0) return;
+
+            resultReceived = true;
+            renderResult(alternatives);
+        };
+
+        recognition.onerror = (event) => {
+            lastError = event.error;
+        };
+
+        recognition.onend = () => {
+            setListening(false);
+
+            if (resultReceived) {
+                statusText.textContent =
+                    "結果を表示しました。もう一度練習できます。";
+            } else if (lastError) {
+                statusText.textContent =
+                    errorMessages[lastError] || "音声認識エラー：" + lastError;
+            } else {
+                statusText.textContent =
+                    "音声を認識できませんでした。もう一度話してください。";
+            }
+        };
+
+        try {
+            recognition.start();
+        } catch (error) {
+            setListening(false);
+            statusText.textContent =
+                "音声認識を開始できませんでした：" + error.message;
+            console.error(error);
         }
-
-        if (alternatives.length === 0) return;
-
-        resultReceived = true;
-        renderResult(alternatives);
-    };
-
-    recognition.onerror = (event) => {
-        lastError = event.error;
-    };
-
-    recognition.onend = () => {
-        setListening(false);
-
-        if (resultReceived) {
-            statusText.textContent =
-                "結果を表示しました。もう一度練習できます。";
-        } else if (lastError) {
-            statusText.textContent =
-                errorMessages[lastError] || "音声認識エラー：" + lastError;
-        } else {
-            statusText.textContent =
-                "音声を認識できませんでした。もう一度話してください。";
-        }
-    };
-
-    try {
-        recognition.start();
-    } catch (error) {
-        setListening(false);
-        statusText.textContent = "音声認識を開始できませんでした。";
-        console.error(error);
-    }
+    }, 250);
 }
 
-function speak(text) {
-    if (!("speechSynthesis" in window)) {
-        statusText.textContent =
-            "このブラウザはお手本の読み上げに対応していません。";
-        return;
-    }
-
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = "en-US";
-    utterance.rate = 0.85;
-
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utterance);
-    statusText.textContent = "🔊 お手本を再生中です！";
+if ("speechSynthesis" in window) {
+    loadVoices();
+    window.speechSynthesis.onvoiceschanged = loadVoices;
 }
 
 sampleButton.addEventListener("click", () => {
-    speak(correctText);
+    speak(correctText, true);
 });
 
 recordButton.addEventListener("click", () => {
@@ -633,7 +723,7 @@ tipsElement.addEventListener("click", (event) => {
 
     if (!button) return;
 
-    speak(button.dataset.word);
+    speak(button.dataset.word, false);
 });
 
 retryButton.addEventListener("click", () => {
@@ -642,6 +732,9 @@ retryButton.addEventListener("click", () => {
         return;
     }
 
+    stopAllSound();
     clearOutput();
-    statusText.textContent = "認識待機中";
+    statusText.textContent = "認識待機中（版" + VERSION + "）";
 });
+
+statusText.textContent = "認識待機中（版" + VERSION + "）";
