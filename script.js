@@ -1,15 +1,10 @@
 const phraseElement = document.getElementById("phrase");
-const wordListElement = document.getElementById("wordList");
-const currentInfo = document.getElementById("currentInfo");
 const result = document.getElementById("result");
 const tipsElement = document.getElementById("tips");
 const totalScoreElement = document.getElementById("totalScore");
 const statusText = document.getElementById("status");
 const sampleButton = document.getElementById("sampleButton");
-const phraseSampleButton = document.getElementById("phraseSampleButton");
 const recordButton = document.getElementById("recordButton");
-const prevButton = document.getElementById("prevButton");
-const nextButton = document.getElementById("nextButton");
 const retryButton = document.getElementById("retryButton");
 
 const correctText = phraseElement.textContent.trim();
@@ -167,14 +162,13 @@ const soundInfo = {
     }
 };
 
-const displayWords = correctText
+const targetWords = correctText
     .split(/\s+/)
     .map((word) => word.replace(/[^A-Za-z0-9']/g, ""))
     .filter((word) => word.length > 0);
 
-const scores = new Array(displayWords.length).fill(null);
+const normalizedTargets = targetWords.map((word) => normalizeWord(word));
 
-let currentIndex = 0;
 let recognition = null;
 let isListening = false;
 let resultReceived = false;
@@ -189,6 +183,15 @@ function escapeHtml(text) {
 
 function normalizeWord(text) {
     return text.toLowerCase().replace(/[^a-z0-9']/g, "");
+}
+
+function normalizeWords(text) {
+    return text
+        .toLowerCase()
+        .replace(/[^a-z0-9'\s]/g, " ")
+        .trim()
+        .split(/\s+/)
+        .filter((word) => word.length > 0);
 }
 
 function levenshtein(a, b) {
@@ -217,47 +220,124 @@ function levenshtein(a, b) {
     return dp[a.length][b.length];
 }
 
-function evaluate(target, alternatives) {
-    const normalizedTarget = normalizeWord(target);
-    let matchedRank = -1;
+function similarity(a, b) {
+    const maxLength = Math.max(a.length, b.length);
 
-    for (let k = 0; k < alternatives.length; k++) {
-        if (normalizeWord(alternatives[k].transcript) === normalizedTarget) {
-            matchedRank = k;
-            break;
+    if (maxLength === 0) return 0;
+
+    return 1 - levenshtein(a, b) / maxLength;
+}
+
+function alignWords(targets, spoken) {
+    const n = targets.length;
+    const m = spoken.length;
+    const dp = [];
+
+    for (let i = 0; i <= n; i++) {
+        dp.push(new Array(m + 1).fill(0));
+    }
+
+    for (let i = 1; i <= n; i++) {
+        dp[i][0] = i;
+    }
+
+    for (let j = 1; j <= m; j++) {
+        dp[0][j] = j;
+    }
+
+    const subCost = (i, j) => 1 - similarity(targets[i], spoken[j]);
+
+    for (let i = 1; i <= n; i++) {
+        for (let j = 1; j <= m; j++) {
+            dp[i][j] = Math.min(
+                dp[i - 1][j - 1] + subCost(i - 1, j - 1),
+                dp[i - 1][j] + 1,
+                dp[i][j - 1] + 1
+            );
         }
     }
 
+    const assigned = new Array(n).fill(null);
+    const extras = [];
+    let i = n;
+    let j = m;
+
+    while (i > 0 || j > 0) {
+        if (
+            i > 0 &&
+            j > 0 &&
+            Math.abs(dp[i][j] - (dp[i - 1][j - 1] + subCost(i - 1, j - 1))) < 1e-9
+        ) {
+            assigned[i - 1] = spoken[j - 1];
+            i--;
+            j--;
+        } else if (
+            i > 0 &&
+            Math.abs(dp[i][j] - (dp[i - 1][j] + 1)) < 1e-9
+        ) {
+            assigned[i - 1] = null;
+            i--;
+        } else {
+            extras.unshift(spoken[j - 1]);
+            j--;
+        }
+    }
+
+    return { assigned: assigned, extras: extras };
+}
+
+function evaluateSentence(alternatives) {
+    const aligned = alternatives.map((alt) =>
+        alignWords(normalizedTargets, normalizeWords(alt.transcript))
+    );
+
     const top = alternatives[0];
+    const topConfidence = top.confidence > 0 ? top.confidence : 0.7;
 
-    if (matchedRank === 0) {
-        const confidence = top.confidence > 0 ? top.confidence : 0.7;
+    const words = targetWords.map((word, index) => {
+        const target = normalizedTargets[index];
+        const heard = aligned[0].assigned[index];
+
+        if (heard === target) {
+            return {
+                word: word,
+                heard: heard,
+                score: Math.round(60 + 40 * topConfidence),
+                rank: 0
+            };
+        }
+
+        for (let k = 1; k < alternatives.length; k++) {
+            if (aligned[k].assigned[index] === target) {
+                return {
+                    word: word,
+                    heard: heard,
+                    score: Math.max(10, 50 - 10 * (k - 1)),
+                    rank: k
+                };
+            }
+        }
+
+        if (heard === null) {
+            return { word: word, heard: null, score: 0, rank: -1 };
+        }
+
         return {
-            score: Math.round(60 + 40 * confidence),
-            matchedRank: 0,
-            confidence: top.confidence
+            word: word,
+            heard: heard,
+            score: Math.round(40 * similarity(heard, target)),
+            rank: -1
         };
-    }
+    });
 
-    if (matchedRank > 0) {
-        return {
-            score: Math.max(10, 50 - 10 * (matchedRank - 1)),
-            matchedRank: matchedRank,
-            confidence: alternatives[matchedRank].confidence
-        };
-    }
-
-    const heard = normalizeWord(top.transcript);
-    const maxLength = Math.max(heard.length, normalizedTarget.length);
-    const similarity =
-        maxLength === 0
-            ? 0
-            : 1 - levenshtein(heard, normalizedTarget) / maxLength;
+    const total = Math.round(
+        words.reduce((sum, w) => sum + w.score, 0) / words.length
+    );
 
     return {
-        score: Math.round(40 * Math.max(0, similarity)),
-        matchedRank: -1,
-        confidence: top.confidence
+        words: words,
+        total: total,
+        extras: aligned[0].extras
     };
 }
 
@@ -266,6 +346,12 @@ function levelText(score) {
     if (score >= 70) return "良い発音です。";
     if (score >= 50) return "もう少しです。";
     return "下のコツを見て、もう一度練習しましょう。";
+}
+
+function chipClass(score) {
+    if (score >= 80) return "good";
+    if (score >= 50) return "mid";
+    return "bad";
 }
 
 function buildMouthSvg(info) {
@@ -305,34 +391,60 @@ function buildMouthSvg(info) {
     return svg;
 }
 
-function renderTips(index, score) {
-    const word = displayWords[index];
-    const info = wordInfo[word.toLowerCase()];
+function renderTips(words) {
+    const groups = {};
+    const order = [];
 
-    if (!info) {
-        tipsElement.innerHTML = "";
+    words.forEach((item) => {
+        if (item.score >= 80) return;
+
+        const info = wordInfo[item.word.toLowerCase()];
+
+        if (!info) return;
+
+        info.sounds.forEach((key) => {
+            if (!groups[key]) {
+                groups[key] = [];
+                order.push(key);
+            }
+
+            if (!groups[key].includes(item.word)) {
+                groups[key].push(item.word);
+            }
+        });
+    });
+
+    if (order.length === 0) {
+        tipsElement.innerHTML =
+            "<p>すべての単語が良好でした。改善が必要な音はありません。</p>";
         return;
     }
 
-    let html =
-        '<h2 class="tips-title">' +
-        (score < 80 ? "改善のポイント" : "さらに良くするコツ") +
-        "：" +
-        escapeHtml(word) +
-        " " +
-        info.ipa +
-        "</h2>";
+    let html = '<h2 class="tips-title">改善のポイント</h2>';
 
-    info.sounds.forEach((key) => {
+    order.forEach((key) => {
         const sound = soundInfo[key];
 
         if (!sound) return;
+
+        const listenButtons = groups[key]
+            .map(
+                (word) =>
+                    '<button type="button" class="tip-listen" data-word="' +
+                    escapeHtml(word) +
+                    '">🔊 ' +
+                    escapeHtml(word) +
+                    "</button>"
+            )
+            .join("");
 
         html +=
             '<div class="tip-card">' +
             '<div class="tip-figure">' + buildMouthSvg(sound) + "</div>" +
             '<div class="tip-text">' +
             "<h3>" + sound.symbol + " " + sound.title + "</h3>" +
+            "<p>対象の単語（押すとお手本が聞けます）：</p>" +
+            "<div>" + listenButtons + "</div>" +
             "<p>" + sound.advice + "</p>" +
             '<p class="common">よくある間違い：' + sound.common + "</p>" +
             "</div></div>";
@@ -341,119 +453,80 @@ function renderTips(index, score) {
     tipsElement.innerHTML = html;
 }
 
-function renderWordList() {
-    wordListElement.innerHTML = "";
-
-    displayWords.forEach((word, index) => {
-        const chip = document.createElement("button");
-        chip.type = "button";
-        chip.className = "word-chip";
-
-        if (index === currentIndex) {
-            chip.classList.add("current");
-        }
-
-        const score = scores[index];
-
-        if (score !== null) {
-            if (score >= 80) {
-                chip.classList.add("good");
-            } else if (score >= 50) {
-                chip.classList.add("mid");
-            } else {
-                chip.classList.add("bad");
-            }
-        }
-
-        chip.textContent = score === null ? word : word + " " + score;
-
-        chip.addEventListener("click", () => {
-            selectWord(index);
-        });
-
-        wordListElement.appendChild(chip);
-    });
-}
-
-function renderCurrentInfo() {
-    const word = displayWords[currentIndex];
-    const info = wordInfo[word.toLowerCase()];
-
-    currentInfo.innerHTML =
-        '<span class="current-word">' + escapeHtml(word) + "</span>" +
-        (info ? '<span class="ipa">' + info.ipa + "</span>" : "") +
-        '<span class="progress-text">' +
-        (currentIndex + 1) + " / " + displayWords.length + " 語目</span>";
-
-    prevButton.disabled = currentIndex === 0;
-    nextButton.disabled = currentIndex === displayWords.length - 1;
-}
-
-function renderTotalScore() {
-    const done = scores.filter((s) => s !== null);
-
-    if (done.length === 0) {
-        totalScoreElement.textContent = "";
-        return;
-    }
-
-    const total = Math.round(
-        done.reduce((sum, s) => sum + s, 0) / done.length
-    );
+function renderResult(alternatives) {
+    const evaluation = evaluateSentence(alternatives);
 
     totalScoreElement.textContent =
-        "総合スコア：" + total + " 点（" +
-        done.length + " / " + displayWords.length + " 語を練習済み）";
-}
+        "総合スコア：" + evaluation.total + " 点";
 
-function selectWord(index) {
-    if (isListening) {
-        statusText.textContent = "先に認識を終了してください。";
-        return;
+    const others = alternatives
+        .slice(1)
+        .map((alt) => escapeHtml(alt.transcript.trim()))
+        .join(" / ");
+
+    const chips = evaluation.words
+        .map(
+            (item) =>
+                '<span class="word-chip ' + chipClass(item.score) + '">' +
+                escapeHtml(item.word) + " " + item.score +
+                "</span>"
+        )
+        .join("");
+
+    const issues = [];
+
+    evaluation.words.forEach((item) => {
+        if (item.rank === 0) return;
+
+        if (item.heard === null) {
+            issues.push(
+                "「" + escapeHtml(item.word) + "」は認識されませんでした。"
+            );
+        } else if (item.rank > 0) {
+            issues.push(
+                "「" + escapeHtml(item.word) + "」は、別の語に聞こえる可能性がありました（認識の第" +
+                (item.rank + 1) + "候補で一致）。"
+            );
+        } else {
+            issues.push(
+                "「" + escapeHtml(item.word) + "」は「" +
+                escapeHtml(item.heard) + "」と認識されました。"
+            );
+        }
+    });
+
+    if (evaluation.extras.length > 0) {
+        issues.push(
+            "お手本にない語が認識されました：" +
+            escapeHtml(evaluation.extras.join(" "))
+        );
     }
 
-    currentIndex = index;
-    result.innerHTML = "";
-    tipsElement.innerHTML = "";
-    statusText.textContent = "認識待機中";
-    renderWordList();
-    renderCurrentInfo();
+    result.innerHTML =
+        "<p>認識された文：<strong>" +
+        escapeHtml(alternatives[0].transcript.trim()) +
+        "</strong></p>" +
+        (others ? "<p>他の候補：" + others + "</p>" : "") +
+        "<p>単語ごとのスコア（緑：80点以上　黄：50〜79点　赤：49点以下）</p>" +
+        '<div class="word-row">' + chips + "</div>" +
+        "<p>" + levelText(evaluation.total) + "</p>" +
+        (issues.length > 0
+            ? '<ul class="issue-list"><li>' + issues.join("</li><li>") + "</li></ul>"
+            : "<p>すべての単語がお手本と一致しました。</p>") +
+        '<p class="note">採点の目安：お手本と一致すると60〜100点（認識の信頼度で変わります。信頼度は文全体で1つの値です）、第2候補以降で一致すると10〜50点、別の語に聞こえた場合は文字の似ている度合いで0〜40点、認識されなかった場合は0点です。総合スコアは単語ごとのスコアの平均です。音素単位の採点ではなく、あくまで目安です。</p>';
+
+    renderTips(evaluation.words);
 }
 
 function setListening(value) {
     isListening = value;
-    recordButton.textContent = value
-        ? "⏹ 認識を終了"
-        : "🎤 この単語を認識";
+    recordButton.textContent = value ? "⏹ 認識を終了" : "🎤 認識を開始";
 }
 
-function handleResult(alternatives) {
-    const word = displayWords[currentIndex];
-    const evaluation = evaluate(word, alternatives);
-
-    scores[currentIndex] = evaluation.score;
-
-    const others = alternatives
-        .slice(1)
-        .map((a) => escapeHtml(a.transcript.trim()))
-        .join(" / ");
-
-    result.innerHTML =
-        "<p>認識された語：<strong>" +
-        escapeHtml(alternatives[0].transcript.trim()) +
-        "</strong></p>" +
-        (others ? "<p>他の候補：" + others + "</p>" : "") +
-        '<p class="score-line">' + escapeHtml(word) +
-        " のスコア：<span class=\"score-number\">" +
-        evaluation.score +
-        "</span> 点</p><p>" +
-        levelText(evaluation.score) +
-        "</p>" +
-        '<p class="note">採点の目安：お手本と一致すると60〜100点（認識の信頼度で変わります）、2番目以降の候補に一致すると10〜50点、一致しない場合は文字の似ている度合いで0〜40点です。音素単位の採点ではなく、あくまで目安です。</p>';
-
-    renderTips(currentIndex, evaluation.score);
-    renderWordList();
-    renderTotalScore();
+function clearOutput() {
+    result.innerHTML = "";
+    tipsElement.innerHTML = "";
+    totalScoreElement.textContent = "";
 }
 
 function startRecognition() {
@@ -463,8 +536,7 @@ function startRecognition() {
         return;
     }
 
-    result.innerHTML = "";
-    tipsElement.innerHTML = "";
+    clearOutput();
     resultReceived = false;
     lastError = "";
 
@@ -477,7 +549,7 @@ function startRecognition() {
     recognition.onstart = () => {
         setListening(true);
         statusText.textContent =
-            "🔴 認識中です。「" + displayWords[currentIndex] + "」と話してください！";
+            "🔴 認識中です。文全体を話してください！";
     };
 
     recognition.onresult = (event) => {
@@ -494,7 +566,7 @@ function startRecognition() {
         if (alternatives.length === 0) return;
 
         resultReceived = true;
-        handleResult(alternatives);
+        renderResult(alternatives);
     };
 
     recognition.onerror = (event) => {
@@ -506,7 +578,7 @@ function startRecognition() {
 
         if (resultReceived) {
             statusText.textContent =
-                "結果を表示しました。もう一度認識するか、次の単語へ進めます。";
+                "結果を表示しました。もう一度練習できます。";
         } else if (lastError) {
             statusText.textContent =
                 errorMessages[lastError] || "音声認識エラー：" + lastError;
@@ -542,10 +614,6 @@ function speak(text) {
 }
 
 sampleButton.addEventListener("click", () => {
-    speak(displayWords[currentIndex]);
-});
-
-phraseSampleButton.addEventListener("click", () => {
     speak(correctText);
 });
 
@@ -560,16 +628,12 @@ recordButton.addEventListener("click", () => {
     startRecognition();
 });
 
-prevButton.addEventListener("click", () => {
-    if (currentIndex > 0) {
-        selectWord(currentIndex - 1);
-    }
-});
+tipsElement.addEventListener("click", (event) => {
+    const button = event.target.closest(".tip-listen");
 
-nextButton.addEventListener("click", () => {
-    if (currentIndex < displayWords.length - 1) {
-        selectWord(currentIndex + 1);
-    }
+    if (!button) return;
+
+    speak(button.dataset.word);
 });
 
 retryButton.addEventListener("click", () => {
@@ -578,19 +642,6 @@ retryButton.addEventListener("click", () => {
         return;
     }
 
-    for (let i = 0; i < scores.length; i++) {
-        scores[i] = null;
-    }
-
-    currentIndex = 0;
-    result.innerHTML = "";
-    tipsElement.innerHTML = "";
+    clearOutput();
     statusText.textContent = "認識待機中";
-    renderWordList();
-    renderCurrentInfo();
-    renderTotalScore();
 });
-
-renderWordList();
-renderCurrentInfo();
-renderTotalScore();
