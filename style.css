@@ -43,8 +43,18 @@ button {
     background: #eee;
 }
 
+#phraseSampleButton {
+    background: #eee;
+}
+
 #recordButton {
     background: #ddd;
+}
+
+#prevButton,
+#nextButton,
+#retryButton {
+    background: #eee;
 }
 
 #status {
@@ -60,4 +70,155 @@ audio {
 .wrong {
     color: red;
     font-weight: bold;
+}
+
+.word-list {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin: 10px 0 20px;
+}
+
+.word-chip {
+    display: inline-block;
+    width: auto;
+    margin: 0;
+    padding: 10px 14px;
+    font-size: 18px;
+    background: #f0f0f0;
+    border: 2px solid transparent;
+    border-radius: 999px;
+}
+
+.word-chip.current {
+    border-color: #1976d2;
+    background: #e3f2fd;
+}
+
+.word-chip.good {
+    background: #c8e6c9;
+}
+
+.word-chip.mid {
+    background: #fff3c4;
+}
+
+.word-chip.bad {
+    background: #ffcdd2;
+}
+
+.word-chip.current.good,
+.word-chip.current.mid,
+.word-chip.current.bad {
+    border-color: #1976d2;
+}
+
+.current-info {
+    margin: 10px 0;
+    min-height: 40px;
+}
+
+.current-word {
+    font-size: 32px;
+    font-weight: bold;
+}
+
+.ipa {
+    margin-left: 10px;
+    font-size: 20px;
+    color: #666;
+}
+
+.progress-text {
+    display: block;
+    margin-top: 4px;
+    font-size: 14px;
+    color: #888;
+}
+
+.nav-row {
+    display: flex;
+    gap: 10px;
+}
+
+.nav-row button {
+    flex: 1;
+    width: auto;
+}
+
+.total-score {
+    margin-top: 10px;
+    font-size: 20px;
+    font-weight: bold;
+    color: #1976d2;
+}
+
+#result {
+    margin-top: 20px;
+    text-align: left;
+}
+
+.score-line {
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.score-number {
+    font-size: 36px;
+    color: #1976d2;
+}
+
+.note {
+    font-size: 13px;
+    color: #777;
+}
+
+#tips {
+    margin-top: 20px;
+    text-align: left;
+}
+
+.tips-title {
+    font-size: 20px;
+    margin: 20px 0 10px;
+}
+
+.tip-card {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin: 14px 0;
+    padding: 16px;
+    background: #fafafa;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+}
+
+.tip-figure {
+    flex: 0 0 220px;
+    max-width: 100%;
+}
+
+.mouth-svg {
+    width: 100%;
+    height: auto;
+}
+
+.tip-text {
+    flex: 1 1 220px;
+}
+
+.tip-text h3 {
+    margin: 0 0 8px;
+    font-size: 18px;
+}
+
+.tip-text p {
+    margin: 6px 0;
+    line-height: 1.6;
+}
+
+.common {
+    color: #c62828;
 }
